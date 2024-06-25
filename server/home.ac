@@ -1,0 +1,2 @@
+GET /
+send_file main.html
