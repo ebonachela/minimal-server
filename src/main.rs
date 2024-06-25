@@ -11,7 +11,7 @@ use std::path::Path;
 
 mod endpoint;
 
-static GET_ENDPOINTS_LIST: Lazy<Mutex<Vec<endpoint::Endpoint>>> = Lazy::new(|| Mutex::new(Vec::new()));
+static ENDPOINTS_LIST: Lazy<Mutex<Vec<endpoint::Endpoint>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 static FILES_DIR: &str = "./public";
 static SERVER_DIR: &str = "./server";
@@ -19,7 +19,7 @@ static SERVER_DIR: &str = "./server";
 fn main() {
     println!("Starting minimal-server.");
 
-    load_get_endpoints();
+    load_endpoints();
 
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
     
@@ -35,10 +35,10 @@ fn main() {
     }
 }
 
-fn load_get_endpoints() {
+fn load_endpoints() {
     let path = SERVER_DIR;
 
-    let mut data = GET_ENDPOINTS_LIST.lock().unwrap();
+    let mut data = ENDPOINTS_LIST.lock().unwrap();
 
     match list_files_in_directory(path) {
         Ok(files) => {
@@ -104,7 +104,7 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn get_path_content(target_path: &str, _http_request: Vec<String>) -> String {
-    let endpoint_list = GET_ENDPOINTS_LIST.lock().unwrap();
+    let endpoint_list = ENDPOINTS_LIST.lock().unwrap();
 
     for endpoint in &*endpoint_list {
         if target_path == endpoint.path {
