@@ -8,11 +8,12 @@ use std::fs;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use std::path::Path;
+use polodb_core::Database;
 
 mod endpoint;
 
 static ENDPOINTS_LIST: Lazy<Mutex<Vec<endpoint::Endpoint>>> = Lazy::new(|| Mutex::new(Vec::new()));
-
+static DB: Lazy<Mutex<Database>> = Lazy::new(|| Mutex::new(Database::open_file("polo.db").unwrap()));
 static FILES_DIR: &str = "./public";
 static SERVER_DIR: &str = "./server";
 
