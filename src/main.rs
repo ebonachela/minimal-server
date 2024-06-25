@@ -67,8 +67,6 @@ fn load_get_endpoints() {
         },
         Err(e) => println!("Error reading directory: {}", e),
     }
-
-    println!("Endpoint list: {data:#?}");
 }
 
 fn list_files_in_directory<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
@@ -106,7 +104,7 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn get_path_content(target_path: &str, _http_request: Vec<String>) -> String {
-    let mut endpoint_list = GET_ENDPOINTS_LIST.lock().unwrap();
+    let endpoint_list = GET_ENDPOINTS_LIST.lock().unwrap();
 
     for endpoint in &*endpoint_list {
         if target_path == endpoint.path {
@@ -116,26 +114,7 @@ fn get_path_content(target_path: &str, _http_request: Vec<String>) -> String {
     }
 
     if target_path.ends_with(".html") || target_path.ends_with(".js") || target_path.ends_with(".css") {
-        let path = FILES_DIR.to_owned() + &target_path;
-        let mut content_type = "text/html";
-
-        if path.ends_with(".html") {
-            content_type = "text/html";
-        } else if path.ends_with(".js") {
-            content_type = "text/javascript";
-        } else if path.ends_with(".css") {
-            content_type = "text/css";
-        }
-
-        match read_file(path) {
-            Ok(contents) => {
-                let file_content_len = contents.len();
-                return format!("HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {file_content_len}\r\n\r\n{contents}");
-            },
-            Err(e) => {
-                println!("Error reading file: {}", e);
-            },
-        }
+        return process_file(target_path.to_string());
     }
 
     return "HTTP/1.1 404 Not Found\r\n\r\n".to_string();
@@ -145,30 +124,36 @@ fn read_file(file_path: String) -> io::Result<String> {
     fs::read_to_string(file_path)
 }
 
+fn process_file(target_file: String) -> String {
+    let path = FILES_DIR.to_owned() + "/" + &target_file;
+    let mut content_type = "text/html";
+
+    if path.ends_with(".html") {
+        content_type = "text/html";
+    } else if path.ends_with(".js") {
+        content_type = "text/javascript";
+    } else if path.ends_with(".css") {
+        content_type = "text/css";
+    }
+    
+    match read_file(path) {
+        Ok(contents) => {
+            let file_content_len = contents.len();
+            return format!("HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {file_content_len}\r\n\r\n{contents}");
+        },
+        Err(e) => {
+            println!("Error reading file: {}", e);
+        },
+    }
+
+    return "HTTP/1.1 404 Not Found\r\n\r\n".to_string();
+}
+
 fn process_server_file(server_actions: Vec<String>) -> String {
     for action in &server_actions {
         if action.starts_with("send_file") {
-            let target_file = action.split(" ").collect::<Vec<_>>()[1];
-            let path = FILES_DIR.to_owned() + "/" + &target_file;
-            let mut content_type = "text/html";
-
-            if path.ends_with(".html") {
-                content_type = "text/html";
-            } else if path.ends_with(".js") {
-                content_type = "text/javascript";
-            } else if path.ends_with(".css") {
-                content_type = "text/css";
-            }
-            
-            match read_file(path) {
-                Ok(contents) => {
-                    let file_content_len = contents.len();
-                    return format!("HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {file_content_len}\r\n\r\n{contents}");
-                },
-                Err(e) => {
-                    println!("Error reading file: {}", e);
-                },
-            }
+            let target_file = action.split(" ").collect::<Vec<_>>()[1].to_string();
+            return process_file(target_file);
         }
     }
 
